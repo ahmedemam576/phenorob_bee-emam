@@ -15,11 +15,18 @@
 from ultralytics import YOLO
 
 # model = YOLO('yolov12s.yaml')
-model = YOLO('yolo12s.pt')
+model = YOLO('/scratch/s52melba/runs/detect/train7/weights/best.pt')
 
 
 results = model.train(
-  data=f'/scratch/s52melba/yolo_final_dataset/dataset.yaml',
-  epochs=50,
-  
+  data=f'/scratch/s52melba/dataset_yolo_sahi/data.yml',
+  epochs=200,
+  batch=16,
+  # dropout=0.2,
+  plots=True,
+  flipud=0.2,
+  mosaic=0.2,
+  mixup=0.2,
+  crop_fraction=0.2,
+  device = "1",
 )

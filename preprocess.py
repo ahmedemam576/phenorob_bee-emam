@@ -1,79 +1,38 @@
 import os
-import shutil
 import random
 
-def convert_to_yolo_format(dataset_folder, output_folder):
-    # Define paths
-    train_input = os.path.join(dataset_folder, "train")
-    val_input = os.path.join(dataset_folder, "val")
+# Path to your train folder
+train_folder = "/scratch/s52melba/dataset_yolo_sahi/val"
+
+# Get all image files
+image_files = [f for f in os.listdir(train_folder) if f.endswith(('.jpg', '.png', '.jpeg'))]
+
+# Separate images into annotated and background (empty annotation file)
+annotated_images = []
+background_images = []
+
+for img in image_files:
+    txt_file = os.path.join(train_folder, img.rsplit(".", 1)[0] + ".txt")
     
-    train_output_img = os.path.join(output_folder, "images", "train")
-    train_output_lbl = os.path.join(output_folder, "labels", "train")
-    val_output_img = os.path.join(output_folder, "images", "val")
-    val_output_lbl = os.path.join(output_folder, "labels", "val")
-    
-    # Create YOLOv5 folder structure
-    for path in [train_output_img, train_output_lbl, val_output_img, val_output_lbl]:
-        os.makedirs(path, exist_ok=True)
+    if os.path.exists(txt_file):
+        with open(txt_file, "r") as f:
+            content = f.read().strip()
+        
+        if content:  
+            annotated_images.append(img)  # Image has boxes
+        else:
+            background_images.append(img)  # Empty annotation file (background image)
 
-    def process_split(input_folder, output_img, output_lbl):
-        for file in os.listdir(input_folder):
-            if file.endswith(".png") or file.endswith(".jpg") or file.endswith(".jpeg"):
-                img_path = os.path.join(input_folder, file)
-                ann_path = os.path.join(input_folder, os.path.splitext(file)[0] + ".txt")
+# Randomly select 20% of background images to keep
+keep_background_images = set(random.sample(background_images, int(len(background_images) * 0.15)))
 
-                # Check if annotation exists
-                if os.path.exists(ann_path):
-                    with open(ann_path, "r") as f:
-                        lines = f.readlines()
-                    
-                    if len(lines) == 0 and random.random() > 0.1:
-                        # Skip images with empty annotations 50% of the time
-                        continue
-                    
-                    # Convert annotation to YOLO format
-                    yolo_annotations = []
-                    for line in lines:
-                        parts = line.strip().split()
-                        if len(parts) < 5:
-                            continue  # Skip malformed lines
-                        
-                        class_id = int(parts[0])
-                        x_min, y_min, x_max, y_max = map(float, parts[1:])
-                        
-                        # Convert to YOLO format (normalized x_center, y_center, width, height)
-                        x_center = (x_min + x_max) / 2
-                        y_center = (y_min + y_max) / 2
-                        width = x_max - x_min
-                        height = y_max - y_min
-                        
-                        yolo_annotations.append(f"{class_id} {x_center} {y_center} {width} {height}")
-                    
-                    # Save converted annotation
-                    with open(os.path.join(output_lbl, os.path.basename(ann_path)), "w") as f:
-                        f.write("\n".join(yolo_annotations))
-                    
-                    # Copy image to the new dataset
-                    shutil.copy(img_path, os.path.join(output_img, os.path.basename(img_path)))
+# Process files
+for img in background_images:
+    if img not in keep_background_images:
+        img_path = os.path.join(train_folder, img)
+        txt_path = os.path.join(train_folder, img.rsplit(".", 1)[0] + ".txt")
+        
+        os.remove(img_path)  # Delete the image
+        os.remove(txt_path)  # Delete the empty annotation file
 
-    # Process train and val splits
-    process_split(train_input, train_output_img, train_output_lbl)
-    process_split(val_input, val_output_img, val_output_lbl)
-
-    # Create dataset.yaml
-    dataset_yaml = f"""train: {os.path.abspath(train_output_img)}
-val: {os.path.abspath(val_output_img)}
-
-nc: 1  # Change this if you have more classes
-names: ['object']  # Change class names accordingly
-"""
-
-    with open(os.path.join(output_folder, "dataset.yaml"), "w") as f:
-        f.write(dataset_yaml)
-
-    print("Dataset conversion completed successfully!")
-
-# Example usage:
-dataset_folder = "/scratch/s52melba/dataset_yolo_sahi"
-output_folder = "/scratch/s52melba/yolo_final_dataset"
-convert_to_yolo_format(dataset_folder, output_folder)
+print("Processing complete. Kept all annotated images and 5% of background images.")
