@@ -1,7 +1,7 @@
 import os
 
 # Set the path to your dataset folder
-dataset_path = "/scratch/s52melba/dataset_yolo_sahi/val"
+dataset_path = "/scratch/s52melba/dataset_yolo_sahi/train"
 
 # Get all files in the dataset folder
 files = os.listdir(dataset_path)

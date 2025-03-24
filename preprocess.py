@@ -2,7 +2,7 @@ import os
 import random
 
 # Path to your train folder
-train_folder = "/scratch/s52melba/dataset_yolo_sahi/val"
+train_folder = "/scratch/s52melba/dataset_yolo_sahi_256/train"
 
 # Get all image files
 image_files = [f for f in os.listdir(train_folder) if f.endswith(('.jpg', '.png', '.jpeg'))]
@@ -24,7 +24,13 @@ for img in image_files:
             background_images.append(img)  # Empty annotation file (background image)
 
 # Randomly select 20% of background images to keep
-keep_background_images = set(random.sample(background_images, int(len(background_images) * 0.15)))
+# keep_background_images = set(random.sample(background_images, int(len(background_images) * 0.15)))
+keep_background_images = set(random.sample(background_images, int(len(annotated_images) * 0.9)))
+print(f"Annotated images: {len(annotated_images)}")
+print(f"Background images: {len(background_images)}")
+print(f"Keep background images: {len(keep_background_images)}")
+if (len(background_images)/len(annotated_images)) > 0.8:
+    raise ValueError("Too many background images, please check the dataset.")
 
 # Process files
 for img in background_images:
@@ -35,4 +41,5 @@ for img in background_images:
         os.remove(img_path)  # Delete the image
         os.remove(txt_path)  # Delete the empty annotation file
 
-print("Processing complete. Kept all annotated images and 5% of background images.")
+# print("Processing complete. Kept all annotated images and 5% of background images.")
+print("Processing complete.")

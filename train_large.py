@@ -14,14 +14,12 @@
 
 from ultralytics import YOLO
 
-model = YOLO('yolov12s.yaml')
-# model = YOLO('/scratch/s52melba/runs/detect/train7/weights/best.pt')
-
+model = YOLO('/scratch/s52melba/phenorob_bee/yolov12l.pt')
 
 results = model.train(
-  data=f'/scratch/s52melba/dataset_yolo_sahi/data.yml',
+  data=f'/scratch/s52melba/dataset_yolo_sahi_256/data.yml',
   epochs=200,
-  batch=16,
+  batch=8,
   # dropout=0.2,
   plots=True,
   flipud=0.2,
