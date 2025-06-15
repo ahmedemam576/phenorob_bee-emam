@@ -94,7 +94,7 @@ def main():
     """Main function to process all videos in a folder with inference."""
     
     # Paths
-    video_folder = "/scratch/s52melba/videos_1fps/20230619_1fps"
+    video_folder = "/scratch/s52melba/videos_1fps/zz_temp"
     output_folder = "/scratch/s52melba/infer_output_all"
     model_path = "/scratch/s52melba/phenorob_bee/runs/detect/train2/weights/best.pt"
     tile_size = 256

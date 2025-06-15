@@ -116,36 +116,51 @@ def main():
     
     # Paths
     # Paths
-    video_folder = "/scratch/s52melba/videos_1fps/20230619_1fps"
+    # video_folder = "/scratch/s52melba/videos_1fps/20230622_1fps"
+
+    video_folder_list = [
+        '/scratch/s52melba/videos_1fps/20230624_1fps',
+        '/scratch/s52melba/videos_1fps/20230626_1fps',
+        '/scratch/s52melba/videos_1fps/20230628_1fps',
+        '/scratch/s52melba/videos_1fps/20230629_1fps',
+        '/scratch/s52melba/videos_1fps/20230630_1fps',
+        '/scratch/s52melba/videos_1fps/20230708_1fps'
+    ]
     output_folder = "/scratch/s52melba/infer_output_all"
     model_path = "/scratch/s52melba/phenorob_bee/runs/detect/train2/weights/best.pt"
     tile_size = 256
     conf_threshold = 0.5
     batch_size = 32  # Adjust based on your GPU memory
+    model = YOLO(model_path)
     
     # Load YOLO model once with GPU
-    model = YOLO(model_path)
     
     os.makedirs(output_folder, exist_ok=True)  # Ensure output folder exists
     
-    # Get video files
-    video_files = glob.glob(os.path.join(video_folder, "*.MOV"))
-    
-    # Create a partial function with the model and other parameters
-    process_func = partial(
-        process_video_with_batch_inference, 
-        output_folder=output_folder, 
-        tile_size=tile_size, 
-        model=model, 
-        conf_threshold=conf_threshold,
-        batch_size=batch_size
-    )
-    
-    # Process videos sequentially (the model will use GPU for batch processing)
-    for video_path in tqdm(video_files, desc="Processing Videos"):
-        process_func(video_path)
+    for video_folder in video_folder_list:
+        # Get video files
+        video_files = glob.glob(os.path.join(video_folder, "*.MOV"))
         
+        # Create a partial function with the model and other parameters
+        process_func = partial(
+            process_video_with_batch_inference, 
+            output_folder=output_folder, 
+            tile_size=tile_size, 
+            model=model, 
+            conf_threshold=conf_threshold,
+            batch_size=batch_size
+        )
+        
+        # Process videos sequentially (the model will use GPU for batch processing)
+        for video_path in tqdm(video_files, desc="Processing Videos"):
+            process_func(video_path)
+            
     print(f"Processing complete. Results saved to: {output_folder}")
-
+                                        
 if __name__ == "__main__":
     main()
+
+# tmux new -s infer_session
+# python3 phenorob_bee/process_videos/infer_videpo_batch.py
+# Ctrl + B, then D   # to exit
+# tmux attach -t infer_session

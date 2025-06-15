@@ -13,11 +13,12 @@
 
 
 from ultralytics import YOLO
-
+import os
+os.environ["COMET_API_KEY"] = "P8W7VEZekEpLpMT9j82D2i3FA"
 model = YOLO('/scratch/s52melba/phenorob_bee/yolov12l.pt')
 
 results = model.train(
-  data=f'/scratch/s52melba/dataset_yolo_sahi_256/data.yml',
+  data=f'/scratch/s52melba/yolo_dataset_v2_ready/data.yml',
   epochs=200,
   batch=8,
   # dropout=0.2,
@@ -27,4 +28,7 @@ results = model.train(
   mixup=0.2,
   crop_fraction=0.2,
   device = "1",
+  project='bee-detection',      # name of the project in Comet
+  name='yolov12l-v2-run1',      # optional run name
+  tracker='comet' 
 )
