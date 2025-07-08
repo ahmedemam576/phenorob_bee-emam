@@ -15,20 +15,26 @@
 from ultralytics import YOLO
 import os
 os.environ["COMET_API_KEY"] = "P8W7VEZekEpLpMT9j82D2i3FA"
-model = YOLO('/scratch/s52melba/phenorob_bee/yolov12l.pt')
+model = YOLO('/scratch/s52melba/bee-detection/yolov12l-v2-run13/weights/best.pt')
 
 results = model.train(
-  data=f'/scratch/s52melba/yolo_dataset_v2_ready/data.yml',
+  data=f'/scratch/s52melba/yolo_v5_mixed_ds/data.yml',
+  optimizer='AdamW',
   epochs=200,
-  batch=8,
-  # dropout=0.2,
+  save_period=40,
+  batch=12,
+  dropout=0.2,
   plots=True,
   flipud=0.2,
   mosaic=0.2,
-  mixup=0.2,
   crop_fraction=0.2,
-  device = "1",
+  amp=False,
+  close_mosaic=50,
+  degrees=40,
+  shear=10,
+  mixup=0.0,
+  device = "0,2,3",
   project='bee-detection',      # name of the project in Comet
-  name='yolov12l-v2-run1',      # optional run name
+  name='yolov12l_train_mixed_ds',      # optional run name
   tracker='comet' 
 )

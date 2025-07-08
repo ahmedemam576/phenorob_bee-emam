@@ -48,7 +48,7 @@ def process_images_with_batch_inference(image_paths, output_folder, tile_size, m
                 batch_paths.append(temp_tile_path)
                 batch_info.append((tile, tile_idx, x_offset, y_offset, temp_tile_path))
 
-            results = model(batch_paths, conf=conf_threshold, device="cuda:1", batch=len(batch_paths))
+            results = model(batch_paths, conf=conf_threshold, device="cuda:0", batch=len(batch_paths))
 
             for k, result in enumerate(results):
                 tile, tile_idx, x_off, y_off, tile_path = batch_info[k]
@@ -94,12 +94,12 @@ def process_images_with_batch_inference(image_paths, output_folder, tile_size, m
 
 def main():
     # Example usage
-    image_paths = glob.glob("/scratch/s52melba/infer_images_input/*.png")  # Update this path
-    output_folder = "/scratch/s52melba/infer_images_output"                 # Update this path
-    model_path = "/scratch/s52melba/phenorob_bee/runs/detect/train2/weights/best.pt"                   # Update this path
+    image_paths = glob.glob("/scratch/s52melba/phenorob_bee/infer_temp/*.jpg")  # Update this path
+    output_folder = "/scratch/s52melba/phenorob_bee/infer_temp_output"                 # Update this path
+    model_path = "/scratch/s52melba/bee-detection/yolov12l-v2-run13/weights/best.pt"                   # Update this path
     tile_size = 256
     conf_threshold = 0.5
-    batch_size = 32
+    batch_size = 2
 
     model = YOLO(model_path)
     process_images_with_batch_inference(
