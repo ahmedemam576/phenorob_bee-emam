@@ -39,6 +39,7 @@ class BeeTracker:
         # Track statistics
         self.track_history = defaultdict(list)  # track_id -> [frame_numbers]
         self.track_durations = {}  # track_id -> duration in seconds
+        self.track_classes = defaultdict(list)  # track_id -> [class_ids for each detection]
         self.frame_count = 0
         
     def detect_frame(self, frame):
@@ -104,13 +105,37 @@ class BeeTracker:
         # Update tracker
         tracked_objects = self.tracker.update(detections=detections)
         
-        # Update track history
+        # Update track history and class information
         for tracked_obj in tracked_objects:
             track_id = tracked_obj.id
-            if track_id is not None:  # Only count initialized tracks
+            if track_id is not None and tracked_obj.last_detection is not None:  # Only count initialized tracks
                 self.track_history[track_id].append(frame_idx)
+                # Store the class_id from the last detection
+                class_id = tracked_obj.last_detection.data['class_id']
+                self.track_classes[track_id].append(class_id)
         
         return tracked_objects
+    
+    def get_dominant_class(self, track_id):
+        """
+        Get the most common class for a track
+        
+        Args:
+            track_id: Track ID
+            
+        Returns:
+            Most common class_id for this track
+        """
+        if track_id not in self.track_classes or not self.track_classes[track_id]:
+            return None
+        
+        # Count occurrences of each class
+        class_counts = {}
+        for class_id in self.track_classes[track_id]:
+            class_counts[class_id] = class_counts.get(class_id, 0) + 1
+        
+        # Return the most common class
+        return max(class_counts, key=class_counts.get)
     
     def calculate_track_durations(self):
         """Calculate duration for each track ID"""
@@ -149,6 +174,7 @@ class BeeTracker:
                 x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
                 
                 conf = detection_data['confidence']
+                class_id = detection_data['class_id']
                 
                 # Choose color based on track ID for consistency
                 colors = [(0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0), 
@@ -158,8 +184,8 @@ class BeeTracker:
                 # Draw bounding box
                 cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
                 
-                # Draw track ID and confidence
-                label = f"ID:{track_id} ({conf:.2f})"
+                # Draw track ID, class, and confidence
+                label = f"ID:{track_id} C:{class_id} ({conf:.2f})"
                 label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
                 
                 # Background for text
@@ -262,7 +288,7 @@ def process_video(video_path, output_path, model_path, conf_threshold=0.5, dista
     print(f"Total number of unique bee tracks: {len(tracker.track_durations)}")
     print(f"Video duration: {total_frames/fps:.2f} seconds")
     print("\nTrack durations:")
-    print("-"*30)
+    print("-"*40)
     
     # Sort tracks by duration (longest first)
     sorted_tracks = sorted(tracker.track_durations.items(), key=lambda x: x[1], reverse=True)
@@ -270,10 +296,11 @@ def process_video(video_path, output_path, model_path, conf_threshold=0.5, dista
     total_track_time = 0
     for track_id, duration in sorted_tracks:
         frame_count = len(tracker.track_history[track_id])
-        print(f"Track ID {track_id:3d}: {duration:6.2f} seconds ({frame_count:4d} frames)")
+        dominant_class = tracker.get_dominant_class(track_id)
+        print(f"Track ID {track_id:3d}: {duration:6.2f}s ({frame_count:4d} frames) Class: {dominant_class}")
         total_track_time += duration
     
-    print("-"*30)
+    print("-"*40)
     print(f"Total tracking time: {total_track_time:.2f} seconds")
     if len(tracker.track_durations) > 0:
         print(f"Average track duration: {total_track_time/len(tracker.track_durations):.2f} seconds")
@@ -282,13 +309,32 @@ def process_video(video_path, output_path, model_path, conf_threshold=0.5, dista
     
     # Save statistics to JSON file
     stats_path = output_path.replace('.mp4', '_stats.json')
+    
+    # Get video filename without path and extension for cleaner reference
+    video_name = os.path.splitext(os.path.basename(video_path))[0]
+    
+    # Create track details with class information
+    track_details = {}
+    for track_id in tracker.track_durations.keys():
+        dominant_class = tracker.get_dominant_class(track_id)
+        track_details[str(track_id)] = {
+            'duration_seconds': tracker.track_durations[track_id],
+            'frame_count': len(tracker.track_history[track_id]),
+            'dominant_class_id': dominant_class,
+            'all_classes': list(set(tracker.track_classes[track_id])) if track_id in tracker.track_classes else []
+        }
+    
     stats = {
+        'video_name': video_name,
+        'video_path': video_path,
         'total_tracks': len(tracker.track_durations),
         'video_duration_seconds': total_frames/fps,
         'total_tracking_time_seconds': total_track_time,
         'average_track_duration_seconds': total_track_time/len(tracker.track_durations) if len(tracker.track_durations) > 0 else 0,
         'longest_track_seconds': max(tracker.track_durations.values()) if tracker.track_durations else 0,
         'shortest_track_seconds': min(tracker.track_durations.values()) if tracker.track_durations else 0,
+        'track_details': track_details,
+        # Legacy fields for backward compatibility
         'track_durations': {str(k): v for k, v in tracker.track_durations.items()},
         'track_frame_counts': {str(k): len(v) for k, v in tracker.track_history.items()}
     }
@@ -298,6 +344,37 @@ def process_video(video_path, output_path, model_path, conf_threshold=0.5, dista
     
     print(f"\nStatistics saved to: {stats_path}")
     print(f"Annotated video saved to: {output_path}")
+
+def process_multiple_videos(video_paths, output_dir, model_path, conf_threshold=0.5, distance_threshold=30, hit_counter_max=10, initialization_delay=3):
+    """
+    Process multiple videos with bee detection and tracking
+    
+    Args:
+        video_paths: List of input video paths
+        output_dir: Output directory for all results
+        model_path: RF-DETR model path
+        conf_threshold: Detection confidence threshold
+        distance_threshold: Maximum distance for matching tracks (pixels)
+        hit_counter_max: Maximum frames to keep a track alive
+        initialization_delay: Frames to wait before initializing new track
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    
+    for i, video_path in enumerate(video_paths):
+        print(f"\n{'='*60}")
+        print(f"Processing video {i+1}/{len(video_paths)}: {video_path}")
+        print(f"{'='*60}")
+        
+        if not os.path.exists(video_path):
+            print(f"Warning: Video file {video_path} does not exist. Skipping...")
+            continue
+        
+        # Create output filename based on input filename
+        video_name = os.path.splitext(os.path.basename(video_path))[0]
+        output_path = os.path.join(output_dir, f"{video_name}_tracked.mp4")
+        
+        # Process the video
+        process_video(video_path, output_path, model_path, conf_threshold, distance_threshold, hit_counter_max, initialization_delay)
 
 def main():
     # Configuration parameters - modify these as needed
@@ -310,6 +387,15 @@ def main():
     distance_threshold = 90      # Max pixel distance for track matching (lower = stricter)
     hit_counter_max = 10         # Max frames to keep track alive without detection
     initialization_delay = 5     # Frames to wait before confirming new track
+    
+    # Example for processing multiple videos
+    # video_paths = [
+    #     "/path/to/video1.mov",
+    #     "/path/to/video2.mp4",
+    #     "/path/to/video3.avi"
+    # ]
+    # output_dir = "/scratch/s52melba/batch_output"
+    # process_multiple_videos(video_paths, output_dir, model_path, conf_threshold, distance_threshold, hit_counter_max, initialization_delay)
     
     # Check if input video exists
     if not os.path.exists(video_path):
@@ -337,5 +423,10 @@ if __name__ == "__main__":
 # pip install norfair
 #
 # Usage:
-# 1. Modify the paths in the main() function
-# 2. Run: python3 bee_tracking_norfair.py
+# 1. For single video: Modify the paths in the main() function and run
+# 2. For multiple videos: Use the process_multiple_videos function with a list of video paths
+# 
+# Example for multiple videos:
+# video_paths = ["/path/to/video1.mov", "/path/to/video2.mp4"]
+# output_dir = "/output/directory"
+# process_multiple_videos(video_paths, output_dir, model_path)
