@@ -378,9 +378,9 @@ def process_multiple_videos(video_paths, output_dir, model_path, conf_threshold=
 
 def main():
     # Configuration parameters - modify these as needed
-    video_path = "/scratch/s52melba/10_sec_vid.mov"  # Your input video path
-    output_path = "/scratch/s52melba/output_tracked/tracked_video.mp4"  # Your desired output path
-    model_path = "/scratch/s52melba/phenorob_bee/detr_output_v2/checkpoint_best_total.pth"
+    video_path = "/scratch/s52melba/test_vid.mov"  # Your input video path
+    output_path = "/scratch/s52melba/out_tracking/test_tracked_video.mp4"  # Your desired output path
+    model_path = "/scratch/s52melba/detr_train_2/checkpoint_best_total.pth"
     
     # Detection and tracking parameters
     conf_threshold = 0.3         # Detection confidence threshold
