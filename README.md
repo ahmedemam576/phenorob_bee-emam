@@ -1,7 +1,6 @@
 ---
 
 ## 📦 Model Weights & Dataset
-
 Model weights and dataset are available here:  
 🔗 https://uni-bonn.sciebo.de/s/RQFNDTtHEg6rYDc
 
