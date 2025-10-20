@@ -1,3 +1,32 @@
+---
+
+## 📦 Model Weights & Dataset
+
+Model weights and dataset are available here:  
+🔗 https://uni-bonn.sciebo.de/s/RQFNDTtHEg6rYDc
+
+---
+
+## 🧪 Inference
+
+To run inference, use the script:  
+`phenorob_bee/infer_image_rfdetr.py`
+
+---
+
+## 📊 Evaluation
+
+To compute metrics, use the script:  
+`utils/all_metrics.py`
+
+---
+
+## ⚙️ Environment & Training
+
+The environment and training setup are the same as in the original RF-DETR repository:  
+🔗 https://github.com/roboflow/rf-detr
+
+
 ## 📁 File Reference — What Each File Does
 
 ---
